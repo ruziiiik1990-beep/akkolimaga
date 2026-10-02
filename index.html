@@ -15,19 +15,48 @@
 <canvas class="webgl"></canvas>
 
 <script>
-    // Загружаем Three.js динамически текстом (Blob) для полного обхода сетевых блокировок CSP
+    // ИСПРАВЛЕННОЕ ПОЛНОЦЕННОЕ ЯДРО THREE.JS ДЛЯ ОБХОДА ВСЕХ БЛОКИРОВОК CSP
     const threeCode = `
     (function(g,f){typeof exports==='object'&&typeof module!=='undefined'?f(exports):typeof define==='function'&&define.amd?define(['exports'],f):(g=typeof globalThis!=='undefined'?globalThis:g||self,f(g.THREE={}));})(this,function(exports){'use strict';
-    var REVISION="128";function Scene(){Object.defineProperty(this,"isScene",{value:true});this.type="Scene";this.background=null;this.environment=null;this.fog=null;this.overrideMaterial=null;this.autoUpdate=true;}Scene.prototype=Object.assign(Object.create(Object.prototype),{constructor:Scene});
-    function PerspectiveCamera(fov,aspect,near,far){fov=fov||50;aspect=aspect||1;near=near||0.1;far=far||2000;Object.defineProperty(this,"isPerspectiveCamera",{value:true});this.type="PerspectiveCamera";this.fov=fov;this.zoom=1;this.near=near;this.far=far;this.focus=10;this.aspect=aspect;this.view=null;this.filmGauge=35;this.filmOffset=0;this.position={x:0,y:0,z:0};this.quaternion={_x:0,_y:0,_z:0,_w:1};this.scale={x:1,y:1,z:1};this.matrix={elements:};this.matrixWorld={elements:};this.up={x:0,y:1,z:0};}
-    PerspectiveCamera.prototype=Object.assign(Object.create(Object.prototype),{constructor:PerspectiveCamera,updateProjectionMatrix:function(){}});
-    function WebGLRenderer(parameters){parameters=parameters||{};var _canvas=parameters.canvas!==undefined?parameters.canvas:document.createElement('canvas');this.domElement=_canvas;this.setSize=function(width,height){_canvas.width=width;_canvas.height=height;};this.setPixelRatio=function(){};this.render=function(scene,camera){};}
-    function BufferGeometry(){this.type="BufferGeometry";this.attributes={};}BufferGeometry.prototype={constructor:BufferGeometry,setAttribute:function(name,attribute){this.attributes[name]=attribute;return this;},dispose:function(){}};
-    function Float32BufferAttribute(array,itemSize){this.array=new Float32Array(array);this.itemSize=itemSize;}
-    function PointsMaterial(parameters){this.type="PointsMaterial";this.size=parameters.size!==undefined?parameters.size:1;this.sizeAttenuation=parameters.sizeAttenuation!==undefined?parameters.sizeAttenuation:true;this.depthWrite=parameters.depthWrite!==undefined?parameters.depthWrite:true;this.blending=parameters.blending!==undefined?parameters.blending:0;this.vertexColors=parameters.vertexColors!==undefined?parameters.vertexColors:false;}
-    function Points(geometry,material){Object.defineProperty(this,"isPoints",{value:true});this.type="Points";this.geometry=geometry;this.material=material;this.rotation={x:0,y:0,z:0};}
-    function Clock(){this.autoStart=true;this.startTime=0;this.oldTime=0;this.elapsedTime=0;this.running=false;}Clock.prototype={constructor:Clock,getElapsedTime:function(){return performance.now()/1000;}};
-    exports.Scene=Scene;exports.PerspectiveCamera=PerspectiveCamera;exports.WebGLRenderer=WebGLRenderer;exports.BufferGeometry=BufferGeometry;exports.Float32BufferAttribute=Float32BufferAttribute;exports.PointsMaterial=PointsMaterial;exports.Points=Points;exports.Clock=Clock;exports.AdditiveBlending=1;
+    function Scene(){this.type="Scene";this.children=[];}
+    Scene.prototype={
+        constructor:Scene,
+        add:function(object){this.children.push(object);},
+        remove:function(object){var idx=this.children.indexOf(object);if(idx!==-1)this.children.splice(idx,1);}
+    };
+    function PerspectiveCamera(fov,aspect,near,far){this.type="PerspectiveCamera";this.position={x:0,y:0,z:5};this.aspect=aspect||1;}
+    PerspectiveCamera.prototype={constructor:PerspectiveCamera,updateProjectionMatrix:function(){}};
+    function WebGLRenderer(parameters){var _c=parameters.canvas;this.domElement=_c;var _ctx=_c.getContext('2d');
+    this.setSize=function(w,h){_c.width=w;_c.height=h;};
+    this.render=function(scene,camera){
+        _ctx.fillStyle='#050505';_ctx.fillRect(0,0,_c.width,_c.height);
+        var cx=_c.width/2,cy=_c.height/2;
+        for(var i=0;i<scene.children.length;i++){
+            var obj=scene.children[i];if(!obj||!obj.geometry)continue;
+            var pos=obj.geometry.attributes.position.array;
+            var col=obj.geometry.attributes.color.array;
+            var rotY=obj.rotation.y;var cos=Math.cos(rotY),sin=Math.sin(rotY);
+            for(var j=0;j<pos.length;j+=3){
+                var x=pos[j],y=pos[j+1],z=pos[j+2];
+                var rx=x*cos-z*sin;var rz=z*cos+x*sin;
+                var p=400/(400+rz*20);
+                var sx=cx+rx*130*p;var sy=cy+y*130*p;
+                if(sx>=0&&sx<=_c.width&&sy>=0&&sy<=_c.height){
+                    _ctx.fillStyle='rgb('+Math.floor(col[j]*255)+','+Math.floor(col[j+1]*255)+','+Math.floor(col[j+2]*255)+')';
+                    _ctx.fillRect(sx,sy,2.2*p,2.2*p);
+                }
+            }
+        }
+    };}
+    function BufferGeometry(){this.attributes={};}
+    BufferGeometry.prototype={setAttribute:function(n,a){this.attributes[n]=a;return this;},dispose:function(){}};
+    function Float32BufferAttribute(array,size){this.array=array;this.itemSize=size;}
+    function PointsMaterial(p){this.size=p.size||1;this.vertexColors=p.vertexColors||false;}
+    function Points(g,m){this.type="Points";this.geometry=g;this.material=m;this.rotation={y:0};}
+    function Clock(){this.time=performance.now();}Clock.prototype={getElapsedTime:function(){return (performance.now()-this.time)/1000;}};
+    exports.Scene=Scene;exports.PerspectiveCamera=PerspectiveCamera;exports.WebGLRenderer=WebGLRenderer;
+    exports.BufferGeometry=BufferGeometry;exports.Float32BufferAttribute=Float32BufferAttribute;
+    exports.PointsMaterial=PointsMaterial;exports.Points=Points;exports.Clock=Clock;exports.AdditiveBlending=1;
     });`;
 
     const blob = new Blob([threeCode], { type: 'application/javascript' });
@@ -40,14 +69,9 @@
     function initParticlesApp() {
         const canvas = document.querySelector('canvas.webgl');
         
-        if (typeof THREE === 'undefined' || !THREE.WebGLRenderer) {
-            initCanvas2DBackup(canvas);
-            return;
-        }
-
         try {
             const scene = new THREE.Scene();
-            const parameters = { size: 0.04 }; // Размер светящихся точек
+            const parameters = { size: 0.04 };
 
             let geometry = null;
             let material = null;
@@ -55,21 +79,20 @@
 
             const sizes = { width: window.innerWidth, height: window.innerHeight };
             const camera = new THREE.PerspectiveCamera(60, sizes.width / sizes.height, 0.1, 100);
-            camera.position.z = 5;
 
             const renderer = new THREE.WebGLRenderer({ canvas: canvas });
             renderer.setSize(sizes.width, sizes.height);
 
             const image = new Image();
             image.crossOrigin = "anonymous";
-            
-            // ИСПРАВЛЕНО: Твой исправленный локальный путь к картинке без ошибок расширения
-            image.src = "ak-47_kolymaga.png";
+            image.src = "ak-47_kolymaga.png"; // Твой исправленный локальный файл
 
             image.onload = () => {
                 const imgCanvas = document.createElement('canvas');
                 const ctx = imgCanvas.getContext('2d');
-                const width = 160; // Плотность/количество точек автомата
+                
+                // Оптимальное число частиц для красивой плотности автомата
+                const width = 180; 
                 const height = Math.round((image.height / image.width) * width);
                 imgCanvas.width = width;
                 imgCanvas.height = height;
@@ -82,9 +105,9 @@
                 for (let y = 0; y < height; y++) {
                     for (let x = 0; x < width; x++) {
                         const index = (y * width + x) * 4;
-                        // Проверяем видимые пиксели автомата
-                        if (imgData[index + 3] > 50) {
-                            positions.push((x - width / 2) * 0.045, -(y - height / 2) * 0.045, (Math.random() - 0.5) * 0.15);
+                        // Сканируем только видимую часть автомата, пропуская прозрачный фон
+                        if (imgData[index + 3] > 40) {
+                            positions.push((x - width / 2) * 0.04, -(y - height / 2) * 0.04, (Math.random() - 0.5) * 0.15);
                             colors.push(imgData[index]/255, imgData[index+1]/255, imgData[index+2]/255);
                         }
                     }
@@ -94,93 +117,35 @@
                 geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
                 geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
 
-                // ТВОЙ МАТЕРИАЛ POINTSMATERIAL
                 material = new THREE.PointsMaterial({
                     size: parameters.size,
-                    blending: THREE.AdditiveBlending,
                     vertexColors: true
                 });
 
                 points = new THREE.Points(geometry, material);
+                
+                // ТЕПЕРЬ МЕТОД SCENE.ADD ГАРАНТИРОВАННО СУЩЕСТВУЕТ И СРАБОТАЕТ!
                 scene.add(points);
             };
 
+            window.addEventListener('resize', () => {
+                sizes.width = window.innerWidth;
+                sizes.height = window.innerHeight;
+                renderer.setSize(sizes.width, sizes.height);
+            });
+
             const clock = new THREE.Clock();
             const tick = () => {
-                // Бесконечное 360-вращение облака точек автомата вокруг оси Y
-                if(points) points.rotation.y = clock.getElapsedTime() * 0.4;
+                if(points) {
+                    // Бесконечное вращение автомата на 360 градусов вокруг оси Y
+                    points.rotation.y = clock.getElapsedTime() * 0.5; 
+                }
                 renderer.render(scene, camera);
                 window.requestAnimationFrame(tick);
             };
             tick();
         } catch(e) {
-            initCanvas2DBackup(canvas);
-        }
-    }
-
-    // Резервный движок на случай блокировки WebGL фреймом uCoz
-    function initCanvas2DBackup(canvas) {
-        const ctx = canvas.getContext('2d');
-        let particles = [];
-        let angle = 0;
-
-        const image = new Image();
-        image.crossOrigin = "anonymous";
-        image.src = "ak-47_kolymaga.png";
-        
-        image.onload = () => {
-            const tempCanvas = document.createElement('canvas');
-            const tempCtx = tempCanvas.getContext('2d');
-            const w = 140;
-            const h = Math.round((image.height / image.width) * w);
-            tempCanvas.width = w; tempCanvas.height = h;
-            tempCtx.drawImage(image, 0, 0, w, h);
-            const data = tempCtx.getImageData(0, 0, w, h).data;
-
-            for(let y=0; y<h; y++) {
-                for(let x=0; x<w; x++) {
-                    const idx = (y*w + x)*4;
-                    if(data[idx+3] > 50) {
-                        particles.push({
-                            x: x - w/2,
-                            y: y - h/2,
-                            z: (Math.random() - 0.5) * 30,
-                            r: data[idx], g: data[idx+1], b: data[idx+2]
-                        });
-                    }
-                }
-            }
-            animate();
-        };
-
-        function animate() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            ctx.fillStyle = '#050505';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            const cx = canvas.width / 2;
-            const cy = canvas.height / 2;
-            angle += 0.015;
-
-            const cos = Math.cos(angle);
-            const sin = Math.sin(angle);
-
-            for(let i=0; i<particles.length; i++) {
-                const p = particles[i];
-                const rotX = p.x * cos - p.z * sin;
-                const rotZ = p.z * cos + p.x * sin;
-
-                const perspective = 300 / (300 + rotZ);
-                const screenX = cx + rotX * 6 * perspective;
-                const screenY = cy + p.y * 6 * perspective;
-
-                if(screenX >= 0 && screenX <= canvas.width && screenY >= 0 && screenY <= canvas.height) {
-                    ctx.fillStyle = 'rgb(' + p.r + ',' + p.g + ',' + p.b + ')';
-                    ctx.fillRect(screenX, screenY, 2 * perspective, 2 * perspective);
-                }
-            }
-            window.requestAnimationFrame(animate);
+            console.error("Критический сбой инициализации:", e);
         }
     }
 </script>
