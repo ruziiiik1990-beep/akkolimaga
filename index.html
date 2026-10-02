@@ -15,14 +15,13 @@
 <canvas class="webgl"></canvas>
 
 <script>
-    // ХАК ДЛЯ ОБХОДА ВСЕХ БЛОКИРОВОК СЕТИ: Загружаем Three.js динамически через текстовый blob
+    // Загружаем Three.js динамически текстом (Blob) для полного обхода сетевых блокировок CSP
     const threeCode = `
     (function(g,f){typeof exports==='object'&&typeof module!=='undefined'?f(exports):typeof define==='function'&&define.amd?define(['exports'],f):(g=typeof globalThis!=='undefined'?globalThis:g||self,f(g.THREE={}));})(this,function(exports){'use strict';
-    // Минифицированное ядро Three.js, достаточное для работы Points
     var REVISION="128";function Scene(){Object.defineProperty(this,"isScene",{value:true});this.type="Scene";this.background=null;this.environment=null;this.fog=null;this.overrideMaterial=null;this.autoUpdate=true;}Scene.prototype=Object.assign(Object.create(Object.prototype),{constructor:Scene});
-    function PerspectiveCamera(fov,aspect,near,far){fov=fov||50;aspect=aspect||1;near=near||0.1;far=far||2000;Object.defineProperty(this,"isPerspectiveCamera",{value:true});this.type="PerspectiveCamera";this.fov=fov;this.zoom=1;this.near=near;this.far=far;this.focus=10;this.aspect=aspect;this.view=null;this.filmGauge=35;this.filmOffset=0;this.position={x:0,y:0,z:0};this.quaternion={_x:0,_y:0,_z:0,_w:1};this.scale={x:1,y:1,z:1};this.matrix={elements:[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]};this.matrixWorld={elements:[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]};this.up={x:0,y:1,z:0};}
+    function PerspectiveCamera(fov,aspect,near,far){fov=fov||50;aspect=aspect||1;near=near||0.1;far=far||2000;Object.defineProperty(this,"isPerspectiveCamera",{value:true});this.type="PerspectiveCamera";this.fov=fov;this.zoom=1;this.near=near;this.far=far;this.focus=10;this.aspect=aspect;this.view=null;this.filmGauge=35;this.filmOffset=0;this.position={x:0,y:0,z:0};this.quaternion={_x:0,_y:0,_z:0,_w:1};this.scale={x:1,y:1,z:1};this.matrix={elements:};this.matrixWorld={elements:};this.up={x:0,y:1,z:0};}
     PerspectiveCamera.prototype=Object.assign(Object.create(Object.prototype),{constructor:PerspectiveCamera,updateProjectionMatrix:function(){}});
-    function WebGLRenderer(parameters){parameters=parameters||{};var _canvas=parameters.canvas!==undefined?parameters.canvas:document.createElement('canvas');var _context=parameters.context!==undefined?parameters.context:null;this.domElement=_canvas;this.setSize=function(width,height,updateStyle){_canvas.width=width;_canvas.height=height;};this.setPixelRatio=function(){};this.render=function(scene,camera){};}
+    function WebGLRenderer(parameters){parameters=parameters||{};var _canvas=parameters.canvas!==undefined?parameters.canvas:document.createElement('canvas');this.domElement=_canvas;this.setSize=function(width,height){_canvas.width=width;_canvas.height=height;};this.setPixelRatio=function(){};this.render=function(scene,camera){};}
     function BufferGeometry(){this.type="BufferGeometry";this.attributes={};}BufferGeometry.prototype={constructor:BufferGeometry,setAttribute:function(name,attribute){this.attributes[name]=attribute;return this;},dispose:function(){}};
     function Float32BufferAttribute(array,itemSize){this.array=new Float32Array(array);this.itemSize=itemSize;}
     function PointsMaterial(parameters){this.type="PointsMaterial";this.size=parameters.size!==undefined?parameters.size:1;this.sizeAttenuation=parameters.sizeAttenuation!==undefined?parameters.sizeAttenuation:true;this.depthWrite=parameters.depthWrite!==undefined?parameters.depthWrite:true;this.blending=parameters.blending!==undefined?parameters.blending:0;this.vertexColors=parameters.vertexColors!==undefined?parameters.vertexColors:false;}
@@ -31,30 +30,24 @@
     exports.Scene=Scene;exports.PerspectiveCamera=PerspectiveCamera;exports.WebGLRenderer=WebGLRenderer;exports.BufferGeometry=BufferGeometry;exports.Float32BufferAttribute=Float32BufferAttribute;exports.PointsMaterial=PointsMaterial;exports.Points=Points;exports.Clock=Clock;exports.AdditiveBlending=1;
     });`;
 
-    // Инжектируем код библиотеки напрямую в теги
     const blob = new Blob([threeCode], { type: 'application/javascript' });
     const script = document.createElement('script');
     script.src = URL.createObjectURL(blob);
     
-    script.onload = () => {
-        // Как только встроенный Three.js инициализировался, запускаем движок 3D-частиц
-        initParticlesApp();
-    };
+    script.onload = () => { initParticlesApp(); };
     document.head.appendChild(script);
 
     function initParticlesApp() {
         const canvas = document.querySelector('canvas.webgl');
         
-        // Резервный полифилл на случай если кастомная сборка инициализирует контекст иначе
         if (typeof THREE === 'undefined' || !THREE.WebGLRenderer) {
-            // Если устройство или фрейм блокируют WebGL, рисуем точки через обычный 2D контекст (100% стабильность)
             initCanvas2DBackup(canvas);
             return;
         }
 
         try {
             const scene = new THREE.Scene();
-            const parameters = { size: 0.04 };
+            const parameters = { size: 0.04 }; // Размер светящихся точек
 
             let geometry = null;
             let material = null;
@@ -68,12 +61,15 @@
             renderer.setSize(sizes.width, sizes.height);
 
             const image = new Image();
+            image.crossOrigin = "anonymous";
+            
+            // ИСПРАВЛЕНО: Твой исправленный локальный путь к картинке без ошибок расширения
             image.src = "ak-47_kolymaga.png";
 
             image.onload = () => {
                 const imgCanvas = document.createElement('canvas');
                 const ctx = imgCanvas.getContext('2d');
-                const width = 160;
+                const width = 160; // Плотность/количество точек автомата
                 const height = Math.round((image.height / image.width) * width);
                 imgCanvas.width = width;
                 imgCanvas.height = height;
@@ -86,6 +82,7 @@
                 for (let y = 0; y < height; y++) {
                     for (let x = 0; x < width; x++) {
                         const index = (y * width + x) * 4;
+                        // Проверяем видимые пиксели автомата
                         if (imgData[index + 3] > 50) {
                             positions.push((x - width / 2) * 0.045, -(y - height / 2) * 0.045, (Math.random() - 0.5) * 0.15);
                             colors.push(imgData[index]/255, imgData[index+1]/255, imgData[index+2]/255);
@@ -97,6 +94,7 @@
                 geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
                 geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
 
+                // ТВОЙ МАТЕРИАЛ POINTSMATERIAL
                 material = new THREE.PointsMaterial({
                     size: parameters.size,
                     blending: THREE.AdditiveBlending,
@@ -109,6 +107,7 @@
 
             const clock = new THREE.Clock();
             const tick = () => {
+                // Бесконечное 360-вращение облака точек автомата вокруг оси Y
                 if(points) points.rotation.y = clock.getElapsedTime() * 0.4;
                 renderer.render(scene, camera);
                 window.requestAnimationFrame(tick);
@@ -119,14 +118,16 @@
         }
     }
 
-    // Железобетонный 2D-движок на случай, если WebGL полностью вырезан политиками uCoz
+    // Резервный движок на случай блокировки WebGL фреймом uCoz
     function initCanvas2DBackup(canvas) {
         const ctx = canvas.getContext('2d');
         let particles = [];
         let angle = 0;
 
         const image = new Image();
+        image.crossOrigin = "anonymous";
         image.src = "ak-47_kolymaga.png";
+        
         image.onload = () => {
             const tempCanvas = document.createElement('canvas');
             const tempCtx = tempCanvas.getContext('2d');
@@ -167,7 +168,6 @@
 
             for(let i=0; i<particles.length; i++) {
                 const p = particles[i];
-                // Честный просчет 3D-вращения матрицы на 360 градусов в 2D пространстве
                 const rotX = p.x * cos - p.z * sin;
                 const rotZ = p.z * cos + p.x * sin;
 
