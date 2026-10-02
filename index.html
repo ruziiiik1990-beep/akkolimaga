@@ -6,8 +6,9 @@
     <title>AK-47 Rat Rod Cloud</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { overflow: hidden; background-color: #050505; width: 100vw; height: 100vh; }
-        canvas { display: block; width: 100%; height: 100%; }
+        /* ИСПРАВЛЕНО: Сделали фон прозрачным, чтобы фрейм идеально вписался в твой Swiper-слайдер */
+        body { overflow: hidden; background: transparent; width: 100vw; height: 100vh; }
+        canvas { display: block; width: 100%; height: 100%; background: transparent; }
     </style>
 </head>
 <body>
@@ -15,7 +16,7 @@
 <canvas class="webgl"></canvas>
 
 <script>
-    // ИСПРАВЛЕННОЕ ПОЛНОЦЕННОЕ ЯДРО THREE.JS ДЛЯ ОБХОДА ВСЕХ БЛОКИРОВОК CSP
+    // ПОЛНОСТЬЮ ОЧИЩЕННОЕ ОТ ОШЕБОК ЯДРО ДЛЯ ЧЕЛЮСТНОГО РЕНДЕРА ЧАСТИЦ
     const threeCode = `
     (function(g,f){typeof exports==='object'&&typeof module!=='undefined'?f(exports):typeof define==='function'&&define.amd?define(['exports'],f):(g=typeof globalThis!=='undefined'?globalThis:g||self,f(g.THREE={}));})(this,function(exports){'use strict';
     function Scene(){this.type="Scene";this.children=[];}
@@ -29,7 +30,7 @@
     function WebGLRenderer(parameters){var _c=parameters.canvas;this.domElement=_c;var _ctx=_c.getContext('2d');
     this.setSize=function(w,h){_c.width=w;_c.height=h;};
     this.render=function(scene,camera){
-        _ctx.fillStyle='#050505';_ctx.fillRect(0,0,_c.width,_c.height);
+        _ctx.clearRect(0,0,_c.width,_c.height);
         var cx=_c.width/2,cy=_c.height/2;
         for(var i=0;i<scene.children.length;i++){
             var obj=scene.children[i];if(!obj||!obj.geometry)continue;
@@ -40,10 +41,10 @@
                 var x=pos[j],y=pos[j+1],z=pos[j+2];
                 var rx=x*cos-z*sin;var rz=z*cos+x*sin;
                 var p=400/(400+rz*20);
-                var sx=cx+rx*130*p;var sy=cy+y*130*p;
+                var sx=cx+rx*140*p;var sy=cy+y*140*p;
                 if(sx>=0&&sx<=_c.width&&sy>=0&&sy<=_c.height){
                     _ctx.fillStyle='rgb('+Math.floor(col[j]*255)+','+Math.floor(col[j+1]*255)+','+Math.floor(col[j+2]*255)+')';
-                    _ctx.fillRect(sx,sy,2.2*p,2.2*p);
+                    _ctx.fillRect(sx,sy,2.5*p,2.5*p);
                 }
             }
         }
@@ -85,14 +86,14 @@
 
             const image = new Image();
             image.crossOrigin = "anonymous";
-            image.src = "ak-47_kolymaga.png"; // Твой исправленный локальный файл
+            image.src = "ak-47_kolymaga.png"; 
 
             image.onload = () => {
                 const imgCanvas = document.createElement('canvas');
                 const ctx = imgCanvas.getContext('2d');
                 
-                // Оптимальное число частиц для красивой плотности автомата
-                const width = 180; 
+                // Увеличили плотность до 190 точек, чтобы прорисовка ржавчины и зубов пасти была еще красивее
+                const width = 190; 
                 const height = Math.round((image.height / image.width) * width);
                 imgCanvas.width = width;
                 imgCanvas.height = height;
@@ -105,9 +106,8 @@
                 for (let y = 0; y < height; y++) {
                     for (let x = 0; x < width; x++) {
                         const index = (y * width + x) * 4;
-                        // Сканируем только видимую часть автомата, пропуская прозрачный фон
                         if (imgData[index + 3] > 40) {
-                            positions.push((x - width / 2) * 0.04, -(y - height / 2) * 0.04, (Math.random() - 0.5) * 0.15);
+                            positions.push((x - width / 2) * 0.04, -(y - height / 2) * 0.04, (Math.random() - 0.5) * 0.12);
                             colors.push(imgData[index]/255, imgData[index+1]/255, imgData[index+2]/255);
                         }
                     }
@@ -123,8 +123,6 @@
                 });
 
                 points = new THREE.Points(geometry, material);
-                
-                // ТЕПЕРЬ МЕТОД SCENE.ADD ГАРАНТИРОВАННО СУЩЕСТВУЕТ И СРАБОТАЕТ!
                 scene.add(points);
             };
 
@@ -137,15 +135,15 @@
             const clock = new THREE.Clock();
             const tick = () => {
                 if(points) {
-                    // Бесконечное вращение автомата на 360 градусов вокруг оси Y
-                    points.rotation.y = clock.getElapsedTime() * 0.5; 
+                    // Скорость вращения (0.45 — плавно и солидно)
+                    points.rotation.y = clock.getElapsedTime() * 0.45; 
                 }
                 renderer.render(scene, camera);
                 window.requestAnimationFrame(tick);
             };
             tick();
         } catch(e) {
-            console.error("Критический сбой инициализации:", e);
+            console.error("Сбой:", e);
         }
     }
 </script>
