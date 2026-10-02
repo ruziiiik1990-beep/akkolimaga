@@ -9,16 +9,21 @@
         body { overflow: hidden; background-color: #050505; width: 100vw; height: 100vh; }
         canvas { display: block; width: 100%; height: 100%; }
     </style>
-    <!-- ИСПРАВЛЕНО: Правильная, 100% рабочая ссылка на библиотеку Three.js -->
-    <script src="https://cloudflare.com"></script>
+    <!-- НОВАЯ ЖЕЛЕЗОБЕТОННАЯ ССЫЛКА НА THREE.JS (РАБОТАЕТ БЕЗ СКАЧИВАНИЯ ФАЙЛОВ) -->
+    <script src="https://unpkg.com"></script>
 </head>
 <body>
 
 <canvas class="webgl"></canvas>
 
 <script>
-    // Запускаем весь скрипт только после того, как страница полностью загрузилась в браузере
     document.addEventListener('DOMContentLoaded', () => {
+        // Проверяем, подгрузилась ли библиотека из нового источника
+        if (typeof THREE === 'undefined') {
+            console.error("Ошибка сети: не удалось загрузить Three.js из резервного источника.");
+            return;
+        }
+
         const canvas = document.querySelector('canvas.webgl');
         const scene = new THREE.Scene();
 
@@ -40,9 +45,8 @@
         renderer.setSize(sizes.width, sizes.height);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-        // Функция сборки автомата из пикселей
+        // Функция создания автомата из точек
         const generateWeaponParticles = (loadedImage) => {
-            // ТВОЙ КОД ОЧИСТКИ СЦЕНЫ
             if(points !== null){
                 geometry.dispose();
                 material.dispose();
@@ -52,7 +56,7 @@
             const imgCanvas = document.createElement('canvas');
             const ctx = imgCanvas.getContext('2d');
             
-            const width = 160; // Плотность точек
+            const width = 160; 
             const height = Math.round((loadedImage.height / loadedImage.width) * width);
             imgCanvas.width = width;
             imgCanvas.height = height;
@@ -74,7 +78,7 @@
                     if (alpha > 0.2) {
                         const posX = (x - width / 2) * 0.045;
                         const posY = -(y - height / 2) * 0.045;
-                        const posZ = (Math.random() - 0.5) * 0.15; // Объем по оси Z
+                        const posZ = (Math.random() - 0.5) * 0.15; 
 
                         positions.push(posX, posY, posZ);
                         colors.push(r, g, b);
@@ -99,7 +103,7 @@
             scene.add(points);
         };
 
-        // Загрузка картинки из корня твоего репозитория
+        // Загружаем картинку, которая лежит рядом с index.html
         const image = new Image();
         image.crossOrigin = "anonymous";
         image.src = "ak-47_kolymaga.png"; 
@@ -109,29 +113,25 @@
         };
 
         image.onerror = () => {
-            console.error("Ошибка: Проверь, лежит ли файл ak-47_kolymaga.png в той же папке на GitHub!");
+            console.error("Ошибка: картинка ak-47_kolymaga.png не найдена в твоей папке на GitHub!");
         };
 
         window.addEventListener('resize', () => {
             sizes.width = window.innerWidth;
             sizes.height = window.innerHeight;
-            
             camera.aspect = sizes.width / sizes.height;
             camera.updateProjectionMatrix();
-            
             renderer.setSize(sizes.width, sizes.height);
         });
 
         const clock = new THREE.Clock();
 
-        // Цикл анимации вращения на 360 градусов
+        // Бесконечное вращение на 360 градусов
         const tick = () => {
             const elapsedTime = clock.getElapsedTime();
-
             if(points) {
                 points.rotation.y = elapsedTime * 0.4; 
             }
-
             renderer.render(scene, camera);
             window.requestAnimationFrame(tick);
         };
