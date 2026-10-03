@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CS2 Auto Particles Showcase (Fixed)</title>
+    <title>CS2 Auto Particles Showcase (Optimized)</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { overflow: hidden; background: transparent; width: 100vw; height: 100vh; }
@@ -61,7 +61,7 @@
         const canvas = document.querySelector('canvas.webgl');
         const scene = new THREE.Scene();
 
-        // ПОЛНЫЙ ТОЧНЫЙ СПИСОК ИМЕН С УЧЁТОМ РЕГИСТРА БУКВ
+        // ТВOЙ ПОЛНЫЙ ПРОВЕРЕННЫЙ СПИСОК ИМЕН
         const weaponsList = [
             'ak-47_kolymaga.png',
             'AK-47_diletanti.png',
@@ -101,7 +101,8 @@
         renderer.setSize(sizes.width, sizes.height);
 
         const imgCanvas = document.createElement('canvas');
-        const ctx = imgCanvas.getContext('2d');
+        // ИСПРАВЛЕНО: Добавили параметр willReadFrequently, чтобы убрать предупреждение и ускорить getImageData
+        const ctx = imgCanvas.getContext('2d', { willReadFrequently: true });
 
         const loadWeaponParticles = (fileName) => {
             isChanging = true;
@@ -140,7 +141,7 @@
                             const tZ = (Math.random() - 0.5) * 0.12;
                             targetPositions.push(tX, tY, tZ);
 
-                            // Анимация красивого высыпки частиц сверху вниз
+                            // Падение частиц сверху вниз
                             currentPositions.push(
                                 tX + (Math.random() - 0.5) * 1.5,
                                 tY - 5 - Math.random() * 4, 
@@ -172,10 +173,10 @@
             loadWeaponParticles(weaponsList[currentWeaponIndex]);
         };
 
-        // Старт с Колымаги
+        // Старт цикла
         loadWeaponParticles(weaponsList[currentWeaponIndex]);
 
-        // Интервал автосмены (9 секунд)
+        // Интервал смены скинов (9 секунд)
         setInterval(nextWeapon, 9000);
 
         window.addEventListener('resize', () => {
