@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AK-47 Rat Rod Cloud</title>
+    <title>AK-47 Rat Rod Cloud with Fall Animation</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { overflow: hidden; background: transparent; width: 100vw; height: 100vh; }
@@ -15,16 +15,16 @@
 <canvas class="webgl"></canvas>
 
 <script>
+    // ЯДРО С ПОДДЕРЖКОЙ ДИНАМИЧЕСКИХ МАССИВОВ ДЛЯ АНИМАЦИИ ПАДЕНИЯ
     const threeCode = `
     (function(g,f){typeof exports==='object'&&typeof module!=='undefined'?f(exports):typeof define==='function'&&define.amd?define(['exports'],f):(g=typeof globalThis!=='undefined'?globalThis:g||self,f(g.THREE={}));})(this,function(exports){'use strict';
     function Scene(){this.type="Scene";this.children=[];}
     Scene.prototype={
-        constructor:Scene,
         add:function(object){this.children.push(object);},
         remove:function(object){var idx=this.children.indexOf(object);if(idx!==-1)this.children.splice(idx,1);}
     };
     function PerspectiveCamera(fov,aspect,near,far){this.type="PerspectiveCamera";this.position={x:0,y:0,z:5};this.aspect=aspect||1;}
-    PerspectiveCamera.prototype={constructor:PerspectiveCamera,updateProjectionMatrix:function(){}};
+    PerspectiveCamera.prototype={updateProjectionMatrix:function(){}};
     function WebGLRenderer(parameters){var _c=parameters.canvas;this.domElement=_c;var _ctx=_c.getContext('2d');
     this.setSize=function(w,h){_c.width=w;_c.height=h;};
     this.render=function(scene,camera){
@@ -76,6 +76,12 @@
             let material = null;
             let points = null;
 
+            // Массивы для хранения финальных (целевых) координат автомата
+            let targetPositions = [];
+            // Текущие динамические координаты частиц, которые будут меняться в анимации
+            let currentPositions = [];
+            let colors = [];
+
             const sizes = { width: window.innerWidth, height: window.innerHeight };
             const camera = new THREE.PerspectiveCamera(60, sizes.width / sizes.height, 0.1, 100);
 
@@ -97,22 +103,30 @@
                 ctx.drawImage(image, 0, 0, width, height);
                 const imgData = ctx.getImageData(0, 0, width, height).data;
 
-                const positions = [];
-                const colors = [];
-
                 for (let y = 0; y < height; y++) {
                     for (let x = 0; x < width; x++) {
                         const index = (y * width + x) * 4;
                         if (imgData[index + 3] > 40) {
-                            // ИСПРАВЛЕНО: Убрали минус перед координатой Y, теперь автомат отображается правильно, не перевернуто!
-                            positions.push((x - width / 2) * 0.04, (y - height / 2) * 0.04, (Math.random() - 0.5) * 0.12);
+                            // Финальная позиция автомата
+                            const tX = (x - width / 2) * 0.04;
+                            const tY = (y - height / 2) * 0.04;
+                            const tZ = (Math.random() - 0.5) * 0.12;
+                            targetPositions.push(tX, tY, tZ);
+
+                            // Начальная позиция: выбрасываем точки высоко вверх (над экраном) с разбросом
+                            currentPositions.push(
+                                tX + (Math.random() - 0.5) * 2, // Небольшой хаотичный разброс в стороны
+                                tY + 4 + Math.random() * 3,      // Высота падения (на 4-7 единиц выше автомата)
+                                tZ + (Math.random() - 0.5) * 2
+                            );
+
                             colors.push(imgData[index]/255, imgData[index+1]/255, imgData[index+2]/255);
                         }
                     }
                 }
 
                 geometry = new THREE.BufferGeometry();
-                geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+                geometry.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(currentPositions), 3));
                 geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
 
                 material = new THREE.PointsMaterial({
@@ -131,16 +145,30 @@
             });
 
             const clock = new THREE.Clock();
+            
             const tick = () => {
-                if(points) {
-                    points.rotation.y = clock.getElapsedTime() * 0.45; 
+                const elapsedTime = clock.getElapsedTime();
+
+                if (points && currentPositions.length > 0) {
+                    const posArray = points.geometry.attributes.position.array;
+
+                    // Плавно двигаем каждую точку из начального верхнего положения к форме автомата
+                    for (let i = 0; i < posArray.length; i++) {
+                        // Магическая формула интерполяции (плавное торможение при приближении)
+                        // Чем меньше значение (например, 0.03), тем медленнее и плавнее будут падать точки
+                        posArray[i] += (targetPositions[i] - posArray[i]) * 0.04;
+                    }
+
+                    // Включаем вращение на 360 градусов вокруг оси Y
+                    points.rotation.y = elapsedTime * 0.45; 
                 }
+
                 renderer.render(scene, camera);
                 window.requestAnimationFrame(tick);
             };
             tick();
         } catch(e) {
-            console.error("Сбой:", e);
+            console.error("Сбой анимации:", e);
         }
     }
 </script>
