@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CS2 Auto Particles Showcase</title>
+    <title>CS2 Auto Particles Showcase (Fixed)</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { overflow: hidden; background: transparent; width: 100vw; height: 100vh; }
@@ -15,7 +15,7 @@
 <canvas class="webgl"></canvas>
 
 <script>
-    // НАШЕ ПРОВЕРЕННОЕ ЯДРО THREE.JS, КОТОРОЕ РАБОТАЕТ БЕЗ ОШИБОК СЕТИ
+    // НАДЁЖНОЕ ВСТРОЕННОЕ ЯДРО THREE.JS ДЛЯ СТАБИЛЬНОЙ РАБОТЫ ЧАСТИЦ
     const threeCode = `
     (function(g,f){typeof exports==='object'&&typeof module!=='undefined'?f(exports):typeof define==='function'&&define.amd?define(['exports'],f):(g=typeof globalThis!=='undefined'?globalThis:g||self,f(g.THREE={}));})(this,function(exports){'use strict';
     function Scene(){this.type="Scene";this.children=[];}
@@ -61,18 +61,28 @@
         const canvas = document.querySelector('canvas.webgl');
         const scene = new THREE.Scene();
 
-        // Полный список твоих новых скинов, загруженных в репозиторий
+        // ПОЛНЫЙ ТОЧНЫЙ СПИСОК ИМЕН С УЧЁТОМ РЕГИСТРА БУКВ
         const weaponsList = [
             'ak-47_kolymaga.png',
-            'ak-47_empress.png',
-            'ak-47_wasteland_rebel.png',
-            'ak-47_legion_of_anubis.png',
-            'ak-47_ice_coaled.png',
-            'ak-47_bloodsport.png',
-            'awp_wildfire.png',
-            'awp_boom.png',
-            'awp_neo_noir.png',
-            'awp_containment_breach.png'
+            'AK-47_diletanti.png',
+            'AK-47_fantomni_vreditel.png',
+            'AK-47_led9noi_ygol.png',
+            'AK-47_nyvo_ryzh.png',
+            'AK-47_zhgycha9_9rkost.png',
+            'AWP_dvoistvennost.png',
+            'AWP_konec.png',
+            'AWP_led9noi_ygol.png',
+            'AWP_mortic.png',
+            'AWP_zelena9_energia.png',
+            'AWPelitnoe_snar9zhenie.png',
+            'M4A1-S_4erni_lotoc.png',
+            'M4A1-S_diki_tysovchik.png',
+            'M4A1-S_no4noi_koshmar.png',
+            'M4A1-S_panel_ypravleni9.png',
+            'M4A1-S_stratosfera.png',
+            'M4A1-S_yedinenie.png',
+            'M4A4_adok.png',
+            'M4A4_zybna9_fei.png'
         ];
         
         let currentWeaponIndex = 0;
@@ -90,7 +100,9 @@
         const renderer = new THREE.WebGLRenderer({ canvas: canvas });
         renderer.setSize(sizes.width, sizes.height);
 
-        // Функция плавной сборки частиц под конкретную пушку
+        const imgCanvas = document.createElement('canvas');
+        const ctx = imgCanvas.getContext('2d');
+
         const loadWeaponParticles = (fileName) => {
             isChanging = true;
 
@@ -99,7 +111,6 @@
             image.src = fileName; 
 
             image.onload = () => {
-                // Если старое оружие уже было — убираем его со сцены
                 if(points !== null){
                     scene.remove(points);
                     geometry.dispose();
@@ -109,18 +120,16 @@
                 currentPositions = [];
                 colors = [];
 
-                const imgCanvas = document.createElement('canvas');
-                const ctx = imgCanvas.getContext('2d');
-                
-                // Подстраиваем плотность точек
-                const width = fileName.includes('awp') ? 220 : 180; 
+                const isAWP = fileName.toLowerCase().includes('awp');
+                const width = isAWP ? 220 : 180; 
                 const height = Math.round((image.height / image.width) * width);
+                
                 imgCanvas.width = width;
                 imgCanvas.height = height;
                 ctx.drawImage(image, 0, 0, width, height);
                 const imgData = ctx.getImageData(0, 0, width, height).data;
 
-                const scaleFactor = fileName.includes('awp') ? 0.035 : 0.04;
+                const scaleFactor = isAWP ? 0.035 : 0.04;
 
                 for (let y = 0; y < height; y++) {
                     for (let x = 0; x < width; x++) {
@@ -131,7 +140,7 @@
                             const tZ = (Math.random() - 0.5) * 0.12;
                             targetPositions.push(tX, tY, tZ);
 
-                            // Точки падают ровно и вертикально сверху вниз
+                            // Анимация красивого высыпки частиц сверху вниз
                             currentPositions.push(
                                 tX + (Math.random() - 0.5) * 1.5,
                                 tY - 5 - Math.random() * 4, 
@@ -153,22 +162,20 @@
             };
 
             image.onerror = () => {
-                // Если какого-то файла нет, скрипт не упадет, а просто пойдет к следующему
                 isChanging = false;
                 nextWeapon();
             };
         };
 
-        // Переключение индекса на следующий пулемет по кругу
         const nextWeapon = () => {
             currentWeaponIndex = (currentWeaponIndex + 1) % weaponsList.length;
             loadWeaponParticles(weaponsList[currentWeaponIndex]);
         };
 
-        // Запуск первого скина
+        // Старт с Колымаги
         loadWeaponParticles(weaponsList[currentWeaponIndex]);
 
-        // Автоматический таймер: меняет скин каждые 9 секунд (хватает на падение и осмотр в 360°)
+        // Интервал автосмены (9 секунд)
         setInterval(nextWeapon, 9000);
 
         window.addEventListener('resize', () => {
@@ -179,18 +186,13 @@
 
         const clock = new THREE.Clock();
         const tick = () => {
-            const elapsedTime = clock.getElapsedTime();
-
             if (points && currentPositions.length > 0) {
                 const posArray = points.geometry.attributes.position.array;
                 for (let i = 0; i < posArray.length; i++) {
-                    // Скорость стягивания частиц на свои законные места
                     posArray[i] += (targetPositions[i] - posArray[i]) * 0.05;
                 }
-                // Наше любимое плавное вращение на 360 градусов
-                points.rotation.y = elapsedTime * 0.45; 
+                points.rotation.y = clock.getElapsedTime() * 0.45; 
             }
-
             renderer.render(scene, camera);
             window.requestAnimationFrame(tick);
         };
