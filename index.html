@@ -3,75 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CS2 Ultimate Weapons Particle Showcase</title>
+    <title>CS2 Auto Particles Showcase</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { overflow: hidden; background: transparent; width: 100vw; height: 100vh; font-family: sans-serif; }
+        body { overflow: hidden; background: transparent; width: 100vw; height: 100vh; }
         canvas { display: block; width: 100%; height: 100%; background: transparent; }
-        
-        /* Прокачанное адаптивное меню с поддержкой скролла для кучи пушек */
-        .menu-container {
-            position: absolute;
-            top: 15px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 8px;
-            width: 95%;
-            max-width: 900px;
-            overflow-x: auto;
-            padding: 12px;
-            background: rgba(5, 5, 5, 0.85);
-            border-radius: 20px;
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            z-index: 10;
-            scrollbar-width: none; /* Прячем скроллбар в Firefox */
-        }
-        .menu-container::-webkit-scrollbar { display: none; } /* Прячем скроллбар в Chrome */
-
-        .menu-btn {
-            background: #151515;
-            color: #b0b0b0;
-            border: 1px solid #333;
-            padding: 8px 16px;
-            font-size: 11px;
-            font-weight: bold;
-            border-radius: 12px;
-            cursor: pointer;
-            white-space: nowrap;
-            transition: all 0.25s ease;
-        }
-        .menu-btn:hover { background: #252525; color: #fff; border-color: #555; }
-        .menu-btn.active { background: #00ffaa; border-color: #00ffcc; color: #050505; box-shadow: 0 0 12px rgba(0, 255, 170, 0.4); }
     </style>
 </head>
 <body>
 
-<!-- Полное меню со всеми старыми и новыми скинами -->
-<div class="menu-container">
-    <button class="menu-btn active" onclick="switchWeapon('ak-47_kolymaga.png', this)">AK-47 Колымага</button>
-    <button class="menu-btn" onclick="switchWeapon('ak-47_empress.png', this)">AK-47 Императрица</button>
-    <button class="menu-btn" onclick="switchWeapon('ak-47_wasteland_rebel.png', this)">AK-47 Бунтарь</button>
-    <button class="menu-btn" onclick="switchWeapon('ak-47_legion_of_anubis.png', this)">AK-47 Анубис</button>
-    <button class="menu-btn" onclick="switchWeapon('ak-47_ice_coaled.png', this)">AK-47 Ледяной</button>
-    <button class="menu-btn" onclick="switchWeapon('ak-47_bloodsport.png', this)">AK-47 Спорт</button>
-    <button class="menu-btn" onclick="switchWeapon('awp_wildfire.png', this)">AWP Пламя</button>
-    <button class="menu-btn" onclick="switchWeapon('awp_boom.png', this)">AWP Бум</button>
-    <button class="menu-btn" onclick="switchWeapon('awp_neo_noir.png', this)">AWP Неонуар</button>
-    <button class="menu-btn" onclick="switchWeapon('awp_containment_breach.png', this)">AWP Антираспад</button>
-</div>
-
 <canvas class="webgl"></canvas>
 
 <script>
-    // НАДЕЖНОЕ ВСТРОЕННОЕ ТЕКСТОВОЕ ЯДРО ДЛЯ ОБХОДА ЦЕНЗУРЫ БРАУЗЕРОВ
+    // НАШЕ ПРОВЕРЕННОЕ ЯДРО THREE.JS, КОТОРОЕ РАБОТАЕТ БЕЗ ОШИБОК СЕТИ
     const threeCode = `
     (function(g,f){typeof exports==='object'&&typeof module!=='undefined'?f(exports):typeof define==='function'&&define.amd?define(['exports'],f):(g=typeof globalThis!=='undefined'?globalThis:g||self,f(g.THREE={}));})(this,function(exports){'use strict';
     function Scene(){this.type="Scene";this.children=[];}
     Scene.prototype={
         add:function(o){this.children.push(o);},
-        remove:function(o){var i=this.children.indexOf(o);if(i!==-1)this.children.splice(i,1);}
+        remove:function(o){var idx=this.children.indexOf(o);if(idx!==-1)this.children.splice(idx,1);}
     };
     function PerspectiveCamera(){this.type="PerspectiveCamera";this.position={z:5};}
     function WebGLRenderer(p){var _c=p.canvas;var _ctx=_c.getContext('2d');this.setSize=function(w,h){_c.width=w;_c.height=h;};
@@ -95,7 +45,7 @@
     function Float32BufferAttribute(a,s){this.array=a;this.itemSize=s;}
     function PointsMaterial(){this.vertexColors=true;}
     function Points(g,m){this.geometry=g;this.material=m;this.rotation={y:0};}
-    function Clock(){this.t=performance.now();}Clock.prototype={getElapsedTime:function(){return (performance.now()-this.t)/1000;}};
+    function Clock(){this.time=performance.now();}Clock.prototype={getElapsedTime:function(){return (performance.now()-this.time)/1000;}};
     exports.Scene=Scene;exports.PerspectiveCamera=PerspectiveCamera;exports.WebGLRenderer=WebGLRenderer;
     exports.BufferGeometry=BufferGeometry;exports.Float32BufferAttribute=Float32BufferAttribute;
     exports.PointsMaterial=PointsMaterial;exports.Points=Points;exports.Clock=Clock;
@@ -107,12 +57,25 @@
     script.onload = () => { initParticlesApp(); };
     document.head.appendChild(script);
 
-    let globalLoadWeapon = null;
-
     function initParticlesApp() {
         const canvas = document.querySelector('canvas.webgl');
         const scene = new THREE.Scene();
 
+        // Полный список твоих новых скинов, загруженных в репозиторий
+        const weaponsList = [
+            'ak-47_kolymaga.png',
+            'ak-47_empress.png',
+            'ak-47_wasteland_rebel.png',
+            'ak-47_legion_of_anubis.png',
+            'ak-47_ice_coaled.png',
+            'ak-47_bloodsport.png',
+            'awp_wildfire.png',
+            'awp_boom.png',
+            'awp_neo_noir.png',
+            'awp_containment_breach.png'
+        ];
+        
+        let currentWeaponIndex = 0;
         let geometry = null;
         let material = null;
         let points = null;
@@ -120,39 +83,43 @@
         let targetPositions = [];
         let currentPositions = [];
         let colors = [];
+        let isChanging = false;
 
         const sizes = { width: window.innerWidth, height: window.innerHeight };
         const camera = new THREE.PerspectiveCamera();
         const renderer = new THREE.WebGLRenderer({ canvas: canvas });
         renderer.setSize(sizes.width, sizes.height);
 
-        globalLoadWeapon = (fileName) => {
-            if(points !== null){
-                scene.remove(points);
-                geometry.dispose();
-            }
-
-            targetPositions = [];
-            currentPositions = [];
-            colors = [];
+        // Функция плавной сборки частиц под конкретную пушку
+        const loadWeaponParticles = (fileName) => {
+            isChanging = true;
 
             const image = new Image();
             image.crossOrigin = "anonymous";
             image.src = fileName; 
 
             image.onload = () => {
+                // Если старое оружие уже было — убираем его со сцены
+                if(points !== null){
+                    scene.remove(points);
+                    geometry.dispose();
+                }
+
+                targetPositions = [];
+                currentPositions = [];
+                colors = [];
+
                 const imgCanvas = document.createElement('canvas');
                 const ctx = imgCanvas.getContext('2d');
                 
-                // Настраиваем шаг сетки: для AWP делаем больше точек по горизонтали, чтобы длинный ствол не размывался
-                const width = fileName.includes('awp') ? 230 : 185; 
+                // Подстраиваем плотность точек
+                const width = fileName.includes('awp') ? 220 : 180; 
                 const height = Math.round((image.height / image.width) * width);
                 imgCanvas.width = width;
                 imgCanvas.height = height;
                 ctx.drawImage(image, 0, 0, width, height);
                 const imgData = ctx.getImageData(0, 0, width, height).data;
 
-                // Умный коэффициент масштабирования: сжимает AWP по осям, чтобы винтовки идеально влезали в рамки слайдера
                 const scaleFactor = fileName.includes('awp') ? 0.035 : 0.04;
 
                 for (let y = 0; y < height; y++) {
@@ -164,11 +131,11 @@
                             const tZ = (Math.random() - 0.5) * 0.12;
                             targetPositions.push(tX, tY, tZ);
 
-                            // Анимация падения: выбрасываем частицы высоко вверх
+                            // Точки падают ровно и вертикально сверху вниз
                             currentPositions.push(
-                                tX + (Math.random() - 0.5) * 2.5,
-                                tY - 5 - Math.random() * 4, // Падение строго сверху вниз
-                                tZ + (Math.random() - 0.5) * 2.5
+                                tX + (Math.random() - 0.5) * 1.5,
+                                tY - 5 - Math.random() * 4, 
+                                tZ + (Math.random() - 0.5) * 1.5
                             );
                             colors.push(imgData[index]/255, imgData[index+1]/255, imgData[index+2]/255);
                         }
@@ -181,15 +148,28 @@
                 material = new THREE.PointsMaterial();
                 points = new THREE.Points(geometry, material);
                 scene.add(points);
+                
+                isChanging = false;
             };
-            
+
             image.onerror = () => {
-                console.error("Ошибка 404: Проверь регистр букв и имя файла на GitHub для: " + fileName);
+                // Если какого-то файла нет, скрипт не упадет, а просто пойдет к следующему
+                isChanging = false;
+                nextWeapon();
             };
         };
 
-        // Стартовое оружие при загрузке
-        globalLoadWeapon('ak-47_kolymaga.png');
+        // Переключение индекса на следующий пулемет по кругу
+        const nextWeapon = () => {
+            currentWeaponIndex = (currentWeaponIndex + 1) % weaponsList.length;
+            loadWeaponParticles(weaponsList[currentWeaponIndex]);
+        };
+
+        // Запуск первого скина
+        loadWeaponParticles(weaponsList[currentWeaponIndex]);
+
+        // Автоматический таймер: меняет скин каждые 9 секунд (хватает на падение и осмотр в 360°)
+        setInterval(nextWeapon, 9000);
 
         window.addEventListener('resize', () => {
             sizes.width = window.innerWidth;
@@ -199,7 +179,24 @@
 
         const clock = new THREE.Clock();
         const tick = () => {
+            const elapsedTime = clock.getElapsedTime();
+
             if (points && currentPositions.length > 0) {
                 const posArray = points.geometry.attributes.position.array;
                 for (let i = 0; i < posArray.length; i++) {
-                    // Скорость стягивания частиц в форму оружия (0.05 — плавно и эффектно)
+                    // Скорость стягивания частиц на свои законные места
+                    posArray[i] += (targetPositions[i] - posArray[i]) * 0.05;
+                }
+                // Наше любимое плавное вращение на 360 градусов
+                points.rotation.y = elapsedTime * 0.45; 
+            }
+
+            renderer.render(scene, camera);
+            window.requestAnimationFrame(tick);
+        };
+        tick();
+    }
+</script>
+
+</body>
+</html>
